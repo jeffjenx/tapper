@@ -1,0 +1,219 @@
+<!doctype html>
+<html>
+<head>
+<title>Tapper Foreground Editor</title>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.2/dist/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<style>
+#app { user-select: none }
+#app * { box-sizing: border-box; display: inline-block }
+
+.sprite { width: 516px; height: 516px; line-height: 0; border: solid 2px transparent }
+.sprite .pixel { width: 16px; height: 16px; border: solid 2px transparent }
+
+.sprite:not([data-active]) { width: 196px; height: 196px }
+.sprite:not([data-active]):hover { border: dashed 2px black }
+
+.sprite:not([data-active]) .pixel { width: 6px; height: 6px }
+.sprite[data-active] .pixel:hover { border: dashed 2px white }
+.sprite[data-active] .pixel[data-palette="11"][data-color="11"]:hover { border-color: black }
+
+[data-color="0"] { background-color: #FF00FF }
+[data-color="1"] { background-color: #FF0000 }
+[data-color="2"] { background-color: #004992 }
+[data-color="3"] { background-color: #FF0049 }
+[data-color="4"] { background-color: #FF0000 }
+[data-color="5"] { background-color: #004992 }
+[data-color="6"] { background-color: #B60092 }
+[data-color="7"] { background-color: #FF9200 }
+[data-color="8"] { background-color: #FF0000 }
+[data-color="9"] { background-color: #000000 }
+[data-color="A"] { background-color: #0092FF }
+[data-color="B"] { background-color: #B60092 }
+[data-color="C"] { background-color: #FF9249 }
+[data-color="D"] { background-color: #6D6D6D }
+[data-color="E"] { background-color: #922400 }
+[data-color="F"] { background-color: #ffffff }
+
+.palettes { position: fixed; bottom: 0; left: calc(50% - 257px); width: 514px; height: 34px; background: white; border: solid 1px black }
+.color { width: 32px; height: 32px; border: solid 2px transparent }
+.color[data-active], .color:hover { border: dotted 2px white }
+.color[data-active][data-color="F"], .color[data-color="F"]:hover { border-color: black }
+</style>
+</head>
+<body>
+<div id="app">
+    <span>
+        <label>Color Data 1</label><br>
+        <span>(e.g. tapper_c.p.u._fg_1_5f_12-7-83.5f)</span><br>
+        <textarea v-model="colorData1"></textarea><br>
+        <button type="button" @click="saveColorData1">Save Color Data 1</button>
+    </span>
+    <span>
+        <label>Color Data 2</label><br>
+        <span>(e.g. tapper_c.p.u._fg_3_5f_12-7-83.5f)</span><br>
+        <textarea v-model="colorData2"></textarea><br>
+        <button type="button" @click="saveColorData2">Save Color Data 2</button>
+    </span>
+    <span>
+        <label>Color Data 3</label><br>
+        <span>(e.g. tapper_c.p.u._fg_5_5f_12-7-83.5f)</span><br>
+        <textarea v-model="colorData3"></textarea><br>
+        <button type="button" @click="saveColorData3">Save Color Data 3</button>
+    </span>
+    <span>
+        <label>Color Data 4</label><br>
+        <span>(e.g. tapper_c.p.u._fg_7_5f_12-7-83.5f)</span><br>
+        <textarea v-model="colorData4"></textarea><br>
+        <button type="button" @click="saveColorData4">Save Color Data 4</button>
+    </span>
+    <div class="sprites">
+        <div v-for="(sprite, spriteIndex) in sprites" class="sprite"
+             @click="clickSprite(spriteIndex)"
+             :data-active="spriteIndex === activeSprite">
+            <span v-for="pixel in sprite.pixels" class="pixel"
+                  @mousedown="spriteIndex === activeSprite ? mouseDownPixel(pixel) : null"
+                  @mouseenter="spriteIndex === activeSprite ? mouseEnterPixel(pixel) : null"
+                  :data-color="pixel.color"
+                  :data-palette="pixel.palette"></span>
+        </div>
+    </div>
+    <div class="palettes">
+        <div v-for="color in 16" class="color"
+                @click="clickColor(color)"
+                :data-active="(color-1).toString(16).toUpperCase() === activeColor"
+                :data-color="(color-1).toString(16).toUpperCase()"></div>
+    </div>
+</div>
+<script>
+new Vue({
+    el: '#app',
+    data() {
+        return {
+            activeColor: null,
+            activeSprite: null,
+            colorData1: "00999000009B990000B9BB00009B9B0000B9B900009BBB0000BB9B0000B999000099C900009CCC00009C99000099330000CC330000C9330000C9990000CC9990009CCC900099C9900009C9900009CC0000099C0000009900000999000009CC0000099C000000990000001100000991000009C9000009CC000009CC000009CC0000000000000999000099B900009B9B0000B9B900009BBB0000B99B0000BB990000BBC90000B9CC0000B9CC0000B9999000999390009C3390009C9390009C9900009C99990099CCC90009CCC90000CC9900009C90000099900000C9900000CC900000CC9000009C00000099000000C9000000C9000000CC000000C90000009900",
+            colorData2: "00990000009B900000B99900009BB90000BBB90000BB9B0000B9BB000099B90000CC9B0000CCC90000CC9C0000999900009339000099330000999900009C990000CCCC00009CCC0000CC990000CCC900009CCC000099990000999F00001199000091CC0000919C00009199000019110000199100001999000019C9000011CC00000000000099000000B99900009BB90000B9BB00009B9B0000BBB90000B9BB0000999B00009C990000CCCC0000CC99000099390000C93300009C33000099990000C9990000CCCC0000999C00009C9900009CCC000099CC0000099900009999000091CC000099CC000009990000091900009191000099910000999100009C1100",
+            colorData3: "00990000009B000000B90000099B900009BB99000999B900099C9B0009CCB90000CC990000CC9C0000CCC9000099990000339900009993000099990000CCC90000CCCC0000CCCC0000C3CC0000C3990000CCCC0000CC9900009C990000999C000019CC000011C90000999900009C190000CC110000CC1100009C910000999900000000000099000000B90000009B900000B9990000BB99000099BB00009CB90000CC9B0000CCB90000CC990000CCCC000099990000339900009939000099990000CC9C0000CCCC0000CCCC0000CC9C0000CC990000CCCC00009C9900009999000019CC000011CC000019CC0000999900009C1100009C110000CC770000CC7700",
+            colorData4: "00990000099B000099B900009B9B0000B9BB0000BB999000BBC990009BCC90009BCC90009BCC90009BC99900999939000933390009999900099990000999990009CCCC0000CCCC00003C9900003999000039C90000C9990000CCC90000CC990000999000001190000099000000CC900000CC900000CC990000CC190000CC1900000000000099000000B90000099B000099B900009BBB90009B9999009BCCB90099CC990009CC990009CCC90009CC99000999930000339300009939000099990000C9990000CCCC0000CCCC0000C3C9000033990000C3CC0000CC990000CC9C00009CC9000099C9000099990000CC900000CC900000CC900000CC990000CC1900",
+        }
+    },
+    computed: {
+        sprites() {
+            let sprites = Array(this.colorData1.length / 256).fill(0).map(tile => { return { pixels: Array(1024).fill(0).map(pixel => { return { } }) } })
+
+            this.colorData1.match(/.{1,256}/g).map((spriteData, spriteIndex) => sprites[spriteIndex].colorData1 = spriteData)
+            this.colorData2.match(/.{1,256}/g).map((spriteData, spriteIndex) => sprites[spriteIndex].colorData2 = spriteData)
+            this.colorData3.match(/.{1,256}/g).map((spriteData, spriteIndex) => sprites[spriteIndex].colorData3 = spriteData)
+            this.colorData4.match(/.{1,256}/g).map((spriteData, spriteIndex) => sprites[spriteIndex].colorData4 = spriteData)
+
+            sprites.map(sprite => {
+                sprite.colorData1.split("").map((byte, byteIndex) => {
+                    let pixelIndex = byteIndex % 2 === 0 ? byteIndex * 4 : (byteIndex - 1) * 4 + 1
+                    sprite.pixels[pixelIndex].color = byte
+                })
+                sprite.colorData2.split("").map((byte, byteIndex) => {
+                    let pixelIndex = byteIndex % 2 === 0 ? byteIndex * 4 : (byteIndex - 1) * 4 + 1
+                    sprite.pixels[pixelIndex + 2].color = byte
+                })
+                sprite.colorData3.split("").map((byte, byteIndex) => {
+                    let pixelIndex = byteIndex % 2 === 0 ? byteIndex * 4 : (byteIndex - 1) * 4 + 1
+                    sprite.pixels[pixelIndex + 4].color = byte
+                })
+                sprite.colorData4.split("").map((byte, byteIndex) => {
+                    let pixelIndex = byteIndex % 2 === 0 ? byteIndex * 4 : (byteIndex - 1) * 4 + 1
+                    sprite.pixels[pixelIndex + 6].color = byte
+                })
+            })
+
+            return sprites
+        }
+    },
+    methods: {
+        clickColor(color) {
+            this.activeColor = (color-1).toString(16).toUpperCase()
+        },
+        clickSprite(spriteIndex) {
+            this.activeSprite = spriteIndex
+        },
+        mouseDownPixel(pixel) {
+            let newColor = this.activeColor
+            
+            pixel.color = newColor
+            
+            this.updateData()
+        },
+        mouseEnterPixel(pixel) {
+            if (event.buttons === 1) {
+                this.mouseDownPixel(pixel)
+            }
+        },
+        updateData() {
+            let updatedColorData1 = ""
+            let updatedColorData2 = ""
+            let updatedColorData3 = ""
+            let updatedColorData4 = ""
+
+            this.sprites.forEach(sprite => {
+                let split = 1
+                let double = true
+                sprite.pixels.forEach((pixel, pixelIndex) => {
+                    if (split === 1)
+                        updatedColorData1 += pixel.color
+                    else if (split === 2)
+                        updatedColorData2 += pixel.color
+                    else if (split === 3)
+                        updatedColorData3 += pixel.color
+                    else if (split === 4)
+                        updatedColorData4 += pixel.color
+
+                    if (!double) split += 1
+                    if (split > 4) split = 1
+                    double = !double
+                })
+            })
+
+            this.colorData1 = updatedColorData1
+            this.colorData2 = updatedColorData2
+            this.colorData3 = updatedColorData3
+            this.colorData4 = updatedColorData4
+        },
+        saveColorData1() {
+            let buffer = new ArrayBuffer(this.colorData1.length / 2)
+            let byteBuffer = new Uint8Array(buffer)
+            for (let i = 0; i < this.colorData1.length; i += 2)
+                byteBuffer[i / 2] = parseInt(this.colorData1.slice(i, i + 2), 16)
+            let blob = new Blob([byteBuffer], {type: "application/octect-stream"})
+            saveAs(blob, "tapper_video_fg_0_a8_12-7-83.a8")
+        },
+        saveColorData2() {
+            let buffer = new ArrayBuffer(this.colorData1.length / 2)
+            let byteBuffer = new Uint8Array(buffer)
+            for (let i = 0; i < this.colorData2.length; i += 2)
+                byteBuffer[i / 2] = parseInt(this.colorData2.slice(i, i + 2), 16)
+            let blob = new Blob([byteBuffer], {type: "application/octect-stream"})
+            saveAs(blob, "tapper_video_fg_2_a6_12-7-83.a6")
+        },
+        saveColorData3() {
+            let buffer = new ArrayBuffer(this.colorData1.length / 2)
+            let byteBuffer = new Uint8Array(buffer)
+            for (let i = 0; i < this.colorData3.length; i += 2)
+                byteBuffer[i / 2] = parseInt(this.colorData3.slice(i, i + 2), 16)
+            let blob = new Blob([byteBuffer], {type: "application/octect-stream"})
+            saveAs(blob, "tapper_video_fg_4_a4_12-7-83.a4")
+
+        },
+        saveColorData4() {
+            let buffer = new ArrayBuffer(this.colorData1.length / 2)
+            let byteBuffer = new Uint8Array(buffer)
+            for (let i = 0; i < this.colorData4.length; i += 2)
+                byteBuffer[i / 2] = parseInt(this.colorData4.slice(i, i + 2), 16)
+            let blob = new Blob([byteBuffer], {type: "application/octect-stream"})
+            saveAs(blob, "tapper_video_fg_6_a2_12-7-83.a2")
+
+        },
+    }
+})
+</script>
+</body>
+</html>
